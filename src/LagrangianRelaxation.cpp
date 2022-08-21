@@ -24,9 +24,17 @@ LagrangianRelaxation::Solution LagrangianRelaxation::subgradient(
             }
             updatedCostMatrix.push_back(updatedCostVector);
         }
+        unordered_set<int> forbiddenDepotEdges; // store forbidden edges to depot
         for(int i = 0; i < forbiddenEdges.size(); i++)
         {
-            updatedCostMatrix[forbiddenEdges[i].first][forbiddenEdges[i].second] = __FLT_MAX__;
+            if(forbiddenEdges[i].first == 0)
+            {
+                forbiddenDepotEdges.insert(forbiddenEdges[i].second);
+            }
+            else
+            {
+                updatedCostMatrix[forbiddenEdges[i].first - 1][forbiddenEdges[i].second - 1] = __FLT_MAX__;
+            }
         }
         for(int i = 0; i < dimension - 2; i++)
         {
@@ -40,6 +48,13 @@ LagrangianRelaxation::Solution LagrangianRelaxation::subgradient(
         Kruskal solver(updatedCostMatrix);
         double bound = solver.MST(dimension - 1);
         Solution solution(bound, u, solver.getEdges(), forbiddenEdges);
+
+        // node must be bounded
+        if(solution.bound > ub)
+        {
+            return solution;
+        }
+
         if(solution.bound > lb)
         {
             lb = solution.bound;
@@ -56,17 +71,20 @@ LagrangianRelaxation::Solution LagrangianRelaxation::subgradient(
         // insert depot
         // calculate the cost of edges with depot
         priority_queue<pair<double, int>> bestVertices;
-        if(dimension > 2)
+        int iter = 1;
+        for(; iter < dimension && bestVertices.size() < 2; iter++)
         {
-            bestVertices.push(make_pair(originalCosts[0][1] - u[0] - u[1], 1));
-            bestVertices.push(make_pair(originalCosts[0][2] - u[0] - u[2], 2));
+            if(forbiddenDepotEdges.find(iter) == forbiddenDepotEdges.end()) // exclude forbidden edges
+            {
+                bestVertices.push(make_pair(originalCosts[0][iter] - u[0] - u[iter], iter));
+            }
         }
-        for(int i = 3; i < dimension; i++)
+        for(; iter < dimension; iter++)
         {
-            if(originalCosts[0][i] - u[0] - u[i] < bestVertices.top().first)
+            if(originalCosts[0][iter] - u[0] - u[iter] < bestVertices.top().first)
             {
                 bestVertices.pop();
-                bestVertices.push(make_pair(originalCosts[0][i] - u[0] - u[i], i));
+                bestVertices.push(make_pair(originalCosts[0][iter] - u[0] - u[iter], iter));
             }
         }
         // add edges to solution

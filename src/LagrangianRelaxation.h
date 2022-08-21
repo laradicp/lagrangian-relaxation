@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <unordered_set>
 #include "Kruskal.h"
 
 using namespace std;
@@ -25,7 +26,7 @@ public:
 
 		bool operator<(const Solution &sol) const
 		{
-			return bound > sol.bound;
+			return bound < sol.bound;
 		}
 	};
 
